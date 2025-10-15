@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline Tangle | jeffreysHistory</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 15px 0;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #ff8a00, #e52e71);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(229, 46, 113, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            color: #aaa;
+            margin-bottom: 15px;
+        }
+        
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .era-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .era-button {
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .era-button:hover:not(.locked) {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .era-button.active {
+            background: linear-gradient(90deg, #ff8a00, #e52e71);
+            border-color: transparent;
+            box-shadow: 0 3px 10px rgba(229, 46, 113, 0.4);
+        }
+        
+        .era-button.locked {
+            background: rgba(255, 255, 255, 0.05);
+            color: #666;
+            cursor: not-allowed;
+            position: relative;
+        }
+        
+        .era-button.locked::after {
+            content: "🔒";
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .game-board {
+            width: 100%;
+            max-width: 800px;
+            height: 400px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            touch-action: none;
+        }
+        
+        .timeline {
+            position: absolute;
+            bottom: 80px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #e52e71, transparent);
+        }
+        
+        .platform {
+            position: absolute;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            border-radius: 6px;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+            border: 2px solid #2E7D32;
+        }
+        
+        .player {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, #ff8a00, #e52e71);
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255, 138, 0, 0.7);
+            z-index: 10;
+            transition: left 0.15s ease;
+        }
+        
+        .player.shielded {
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+            border: 2px solid cyan;
+            animation: shield-pulse 1s infinite;
+        }
+        
+        .player.frozen-power {
+            box-shadow: 0 0 20px rgba(100, 149, 237, 0.8);
+            border: 2px solid cornflowerblue;
+        }
+        
+        .artifact {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #00b4db, #0083b0);
+            border-radius: 8px;
+            box-shadow: 0 0 12px rgba(0, 180, 219, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            padding: 4px;
+            text-align: center;
+            border: 2px solid white;
+            z-index: 5;
+        }
+        
+        .artifact.special {
+            background: linear-gradient(135deg, #ffd700, #ffa500);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+            animation: pulse-gold 2s infinite;
+        }
+        
+        .artifact-icon {
+            font-size: 1rem;
+            margin-bottom: 2px;
+        }
+        
+        .artifact-name {
+            font-size: 0.5rem;
+            line-height: 1;
+        }
+        
+        .obstacle {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+            border-radius: 4px;
+            box-shadow: 0 0 12px rgba(255, 65, 108, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            z-index: 5;
+        }
+        
+        .obstacle.moving {
+            animation: pulse-red 1.5s infinite;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .control-button {
+            padding: 12px 25px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        
+        .control-button:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .control-button.jump {
+            background: linear-gradient(90deg, #00b09b, #96c93d);
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 800px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+            flex: 1;
+            min-width: 120px;
+            margin: 5px 0;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff8a00;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        
+        .powerup-indicators {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .powerup-indicator {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        
+        .powerup-indicator.active {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+        }
+        
+        .powerup-indicator.ready:hover, .powerup-indicator.ready:active {
+            transform: scale(1.05);
+            background: rgba(0, 255, 255, 0.3);
+        }
+        
+        .era-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+            z-index: -1;
+            transition: opacity 0.5s ease;
+        }
+        
+        .instructions {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 8px;
+            font-size: 0.8rem;
+            text-align: center;
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        .instructions p {
+            margin: 4px 0;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            padding: 15px;
+        }
+        
+        .modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.3rem;
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+        
+        .close-modal:active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .modal h2 {
+            font-size: 1.7rem;
+            margin-bottom: 12px;
+            color: #ff8a00;
+        }
+        
+        .modal p {
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        
+        .start-button {
+            padding: 12px 25px;
+            background: linear-gradient(90deg, #ff8a00, #e52e71);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(229, 46, 113, 0.4);
+            margin-top: 8px;
+        }
+        
+        .start-button:active {
+            transform: scale(0.95);
+        }
+        
+        .puzzle-container {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        .puzzle-question {
+            font-size: 1rem;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .puzzle-options {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+        
+        .puzzle-option {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+        
+        .puzzle-option:active {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(0.98);
+        }
+        
+        .puzzle-option.correct {
+            background: rgba(0, 255, 0, 0.3);
+        }
+        
+        .puzzle-option.incorrect {
+            background: rgba(255, 0, 0, 0.3);
+        }
+        
+        .question-counter {
+            font-size: 0.9rem;
+            color: #ff8a00;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        @keyframes pulse-gold {
+            0% { transform: scale(1); box-shadow: 0 0 12px rgba(255, 215, 0, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 215, 0, 1); }
+            100% { transform: scale(1); box-shadow: 0 0 12px rgba(255, 215, 0, 0.7); }
+        }
+        
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 8px rgba(255, 65, 108, 0.7); }
+            50% { box-shadow: 0 0 15px rgba(255, 65, 108, 1); }
+            100% { box-shadow: 0 0 8px rgba(255, 65, 108, 0.7); }
+        }
+        
+        @keyframes shield-pulse {
+            0% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.8); }
+            50% { box-shadow: 0 0 25px rgba(0, 255, 255, 1); }
+            100% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.8); }
+        }
+        
+        .player.collecting {
+            animation: pulse 0.5s ease;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .completion-message {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            color: #ff8a00;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            text-align: center;
+            z-index: 20;
+        }
+        
+        .completion-message.active {
+            opacity: 1;
+        }
+        
+        .time-frozen-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(100, 149, 237, 0.2);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 15;
+        }
+        
+        .time-frozen-overlay.active {
+            opacity: 1;
+        }
+        
+        .mobile-controls {
+            display: none;
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 25;
+        }
+        
+        .mobile-joystick {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            user-select: none;
+            touch-action: none;
+        }
+        
+        .mobile-joystick:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .game-board {
+                height: 350px;
+            }
+            
+            .era-button {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+            
+            .artifact {
+                width: 45px;
+                height: 45px;
+            }
+            
+            .artifact-name {
+                font-size: 0.45rem;
+            }
+            
+            .modal-content {
+                padding: 20px;
+            }
+            
+            .modal h2 {
+                font-size: 1.5rem;
+            }
+            
+            .mobile-controls {
+                display: flex;
+            }
+            
+            .controls {
+                display: none;
+            }
+            
+            .stats {
+                padding: 8px;
+            }
+            
+            .stat-item {
+                min-width: 100px;
+            }
+            
+            .stat-value {
+                font-size: 1.3rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 1.7rem;
+            }
+            
+            .game-board {
+                height: 300px;
+            }
+            
+            .mobile-joystick {
+                width: 70px;
+                height: 70px;
+                font-size: 1.3rem;
+            }
+            
+            .powerup-indicator {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>TIMELINE TANGLE</h1>
+            <div class="subtitle">by jeffreysHistory - Restore the fabric of time!</div>
+        </header>
+        
+        <div class="game-container">
+            <div class="era-selector">
+                <button class="era-button active" data-era="prehistoric">Prehistoric Era</button>
+                <button class="era-button locked" data-era="ancient">Ancient Civilizations</button>
+                <button class="era-button locked" data-era="medieval">Medieval Times</button>
+                <button class="era-button locked" data-era="renaissance">Renaissance</button>
+                <button class="era-button locked" data-era="modern">Modern Age</button>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="score">0</div>
+                    <div class="stat-label">POINTS</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="artifacts">0/5</div>
+                    <div class="stat-label">ARTIFACTS</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="lives">3</div>
+                    <div class="stat-label">LIVES</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="era">Prehistoric</div>
+                    <div class="stat-label">ERA</div>
+                </div>
+            </div>
+            
+            <div class="powerup-indicators">
+                <div class="powerup-indicator" id="shield-indicator">
+                    <span>🛡️</span> <span id="shield-time">CLICK TO ACTIVATE</span>
+                </div>
+                <div class="powerup-indicator" id="freeze-indicator">
+                    <span>⏱️</span> <span id="freeze-time">CLICK TO ACTIVATE</span>
+                </div>
+            </div>
+            
+            <div class="game-board">
+                <div class="era-background" id="era-background"></div>
+                <div class="time-frozen-overlay" id="time-frozen-overlay"></div>
+                <div class="timeline"></div>
+                <div class="player" id="player"></div>
+                <div class="completion-message" id="completion-message">
+                    <div>Era Completed!</div>
+                    <div style="font-size: 0.9rem; margin-top: 8px;">Get ready for the next time period!</div>
+                </div>
+                
+                <!-- Mobile Controls -->
+                <div class="mobile-controls">
+                    <div class="mobile-joystick" id="mobile-left">←</div>
+                    <div class="mobile-joystick" id="mobile-jump">↑</div>
+                    <div class="mobile-joystick" id="mobile-right">→</div>
+                </div>
+            </div>
+            
+            <div class="instructions">
+                <p><strong>HOW TO PLAY:</strong> Jump between platforms to collect artifacts! Use power-ups strategically.</p>
+                <p><strong>Power-ups:</strong> Tap shield for invincibility | Tap freeze to stop time</p>
+            </div>
+            
+            <div class="controls">
+                <button class="control-button" id="move-left">← LEFT</button>
+                <button class="control-button jump" id="jump-btn">↑ JUMP</button>
+                <button class="control-button" id="move-right">RIGHT →</button>
+                <button class="control-button" id="action-btn">SOLVE PUZZLE</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal active" id="start-modal">
+        <div class="modal-content">
+            <button class="close-modal" id="close-start-modal">×</button>
+            <h2>TIMELINE TANGLE</h2>
+            <p>A catastrophic time machine malfunction has scrambled historical events!</p>
+            <p><strong>Your Mission:</strong> Travel through time, collect artifacts, solve puzzles, and restore history!</p>
+            
+            <div style="text-align: left; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; margin: 12px 0;">
+                <p><strong>How to Play:</strong></p>
+                <p>• Jump between platforms to collect artifacts</p>
+                <p>• Avoid red obstacles on the ground</p>
+                <p>• Collect GOLD artifacts for special powers</p>
+                <p>• Tap power-up icons to activate them</p>
+                <p>• Solve 3 historical puzzles to progress</p>
+                
+                <p><strong>Power-ups:</strong></p>
+                <p>🛡️ Shield - Tap to become invincible for 10 seconds</p>
+                <p>⏱️ Time Freeze - Tap to stop all obstacles for 8 seconds</p>
+                
+                <p><strong>Controls:</strong></p>
+                <p>Arrow Keys or A/D to move</p>
+                <p>W/Up Arrow or Tap ↑ to jump</p>
+                <p>Enter to solve puzzles</p>
+            </div>
+            
+            <button class="start-button" id="start-button">BEGIN TIME TRAVEL</button>
+        </div>
+    </div>
+    
+    <div class="modal" id="puzzle-modal">
+        <div class="modal-content">
+            <button class="close-modal" id="close-puzzle-modal">×</button>
+            <h2>HISTORICAL PUZZLE</h2>
+            <div class="question-counter" id="question-counter">Question 1 of 3</div>
+            <div class="puzzle-container">
+                <div class="puzzle-question" id="puzzle-question"></div>
+                <div class="puzzle-options" id="puzzle-options"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="game-over-modal">
+        <div class="modal-content">
+            <button class="close-modal" id="close-game-over-modal">×</button>
+            <h2 id="game-over-title">TIMELINE COLLAPSED</h2>
+            <p id="game-over-message">The fabric of time has been irreparably damaged. History is lost forever.</p>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <button class="start-button" id="restart-button">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        const gameState = {
+            score: 0,
+            artifacts: 0,
+            lives: 3,
+            currentEra: 'prehistoric',
+            gameActive: false,
+            playerX: 100,
+            playerY: 320, // Start on timeline
+            playerVelocityY: 0,
+            isJumping: false,
+            artifactsCollected: 0,
+            totalArtifacts: 5,
+            platforms: [],
+            obstacles: [],
+            artifactsOnBoard: [],
+            puzzleActive: false,
+            unlockedEras: ['prehistoric'],
+            powerUps: {
+                shield: { active: false, timeLeft: 0, available: false },
+                freeze: { active: false, timeLeft: 0, available: false }
+            },
+            obstacleMoveInterval: null,
+            gravity: 0.5,
+            jumpPower: -12,
+            currentQuestions: [],
+            currentQuestionIndex: 0,
+            questionsPerEra: 3
+        };
+
+        // DOM elements
+        const startModal = document.getElementById('start-modal');
+        const puzzleModal = document.getElementById('puzzle-modal');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+        const closeStartModal = document.getElementById('close-start-modal');
+        const closePuzzleModal = document.getElementById('close-puzzle-modal');
+        const closeGameOverModal = document.getElementById('close-game-over-modal');
+        const eraButtons = document.querySelectorAll('.era-button');
+        const player = document.getElementById('player');
+        const eraBackground = document.getElementById('era-background');
+        const timeFrozenOverlay = document.getElementById('time-frozen-overlay');
+        const scoreElement = document.getElementById('score');
+        const artifactsElement = document.getElementById('artifacts');
+        const livesElement = document.getElementById('lives');
+        const eraElement = document.getElementById('era');
+        const moveLeftButton = document.getElementById('move-left');
+        const moveRightButton = document.getElementById('move-right');
+        const jumpButton = document.getElementById('jump-btn');
+        const actionButton = document.getElementById('action-btn');
+        const puzzleQuestion = document.getElementById('puzzle-question');
+        const puzzleOptions = document.getElementById('puzzle-options');
+        const questionCounter = document.getElementById('question-counter');
+        const completionMessage = document.getElementById('completion-message');
+        const gameOverTitle = document.getElementById('game-over-title');
+        const gameOverMessage = document.getElementById('game-over-message');
+        const finalScore = document.getElementById('final-score');
+        const shieldIndicator = document.getElementById('shield-indicator');
+        const freezeIndicator = document.getElementById('freeze-indicator');
+        const shieldTime = document.getElementById('shield-time');
+        const freezeTime = document.getElementById('freeze-time');
+        const mobileLeft = document.getElementById('mobile-left');
+        const mobileRight = document.getElementById('mobile-right');
+        const mobileJump = document.getElementById('mobile-jump');
+
+        // Physics constants
+        const TIMELINE_Y = 320; // Y position of the timeline
+        const PLATFORM_HEIGHT = 12;
+
+        // Initialize game
+        function initGame() {
+            gameState.score = 0;
+            gameState.artifacts = 0;
+            gameState.lives = 3;
+            gameState.currentEra = 'prehistoric';
+            gameState.gameActive = true;
+            gameState.playerX = 100;
+            gameState.playerY = TIMELINE_Y;
+            gameState.playerVelocityY = 0;
+            gameState.isJumping = false;
+            gameState.artifactsCollected = 0;
+            gameState.platforms = [];
+            gameState.obstacles = [];
+            gameState.artifactsOnBoard = [];
+            gameState.puzzleActive = false;
+            gameState.unlockedEras = ['prehistoric'];
+            gameState.powerUps = {
+                shield: { active: false, timeLeft: 0, available: false },
+                freeze: { active: false, timeLeft: 0, available: false }
+            };
+            gameState.currentQuestions = [];
+            gameState.currentQuestionIndex = 0;
+            
+            // Clear any existing interval
+            if (gameState.obstacleMoveInterval) {
+                clearInterval(gameState.obstacleMoveInterval);
+            }
+            
+            updateUI();
+            setEra('prehistoric');
+            generatePlatforms();
+            generateArtifacts();
+            generateObstacles();
+            updateEraButtons();
+            updatePowerUpIndicators();
+            
+            startModal.classList.remove('active');
+            puzzleModal.classList.remove('active');
+            gameOverModal.classList.remove('active');
+            timeFrozenOverlay.classList.remove('active');
+            
+            // Start game loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Game loop with physics
+        function gameLoop() {
+            if (!gameState.gameActive) return;
+            
+            // Apply gravity
+            if (gameState.isJumping || gameState.playerY < TIMELINE_Y) {
+                gameState.playerVelocityY += gameState.gravity;
+                gameState.playerY += gameState.playerVelocityY;
+                
+                // Check if landed on timeline
+                if (gameState.playerY >= TIMELINE_Y) {
+                    gameState.playerY = TIMELINE_Y;
+                    gameState.playerVelocityY = 0;
+                    gameState.isJumping = false;
+                }
+                
+                // Check if landed on platforms
+                checkPlatformCollision();
+            }
+            
+            // Update player position
+            player.style.left = `${gameState.playerX}px`;
+            player.style.top = `${gameState.playerY}px`;
+            
+            // Check collisions
+            checkArtifactCollision();
+            if (!gameState.powerUps.shield.active) {
+                checkObstacleCollision();
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Generate platforms for the era
+        function generatePlatforms() {
+            gameState.platforms = [];
+            document.querySelectorAll('.platform').forEach(el => el.remove());
+            
+            // Create platforms at different heights
+            const platformPositions = [
+                { x: 120, y: 280, width: 100 },
+                { x: 300, y: 240, width: 90 },
+                { x: 500, y: 200, width: 100 },
+                { x: 180, y: 160, width: 80 },
+                { x: 400, y: 120, width: 90 }
+            ];
+            
+            platformPositions.forEach(pos => {
+                const platform = document.createElement('div');
+                platform.className = 'platform';
+                platform.style.left = `${pos.x}px`;
+                platform.style.top = `${pos.y}px`;
+                platform.style.width = `${pos.width}px`;
+                platform.style.height = `${PLATFORM_HEIGHT}px`;
+                
+                document.querySelector('.game-board').appendChild(platform);
+                gameState.platforms.push({
+                    element: platform,
+                    x: pos.x,
+                    y: pos.y,
+                    width: pos.width,
+                    height: PLATFORM_HEIGHT
+                });
+            });
+        }
+
+        // Check if player is on a platform
+        function checkPlatformCollision() {
+            let onPlatform = false;
+            
+            gameState.platforms.forEach(platform => {
+                if (gameState.playerX + 35 > platform.x && 
+                    gameState.playerX < platform.x + platform.width &&
+                    gameState.playerY + 35 >= platform.y && 
+                    gameState.playerY + 35 <= platform.y + platform.height + 5) {
+                    
+                    gameState.playerY = platform.y - 35;
+                    gameState.playerVelocityY = 0;
+                    gameState.isJumping = false;
+                    onPlatform = true;
+                }
+            });
+            
+            return onPlatform;
+        }
+
+        // Close modals
+        closeStartModal.addEventListener('click', () => {
+            startModal.classList.remove('active');
+        });
+        
+        closePuzzleModal.addEventListener('click', () => {
+            puzzleModal.classList.remove('active');
+            gameState.puzzleActive = false;
+        });
+        
+        closeGameOverModal.addEventListener('click', () => {
+            gameOverModal.classList.remove('active');
+        });
+
+        // Update era buttons based on unlocked eras
+        function updateEraButtons() {
+            eraButtons.forEach(button => {
+                const era = button.dataset.era;
+                if (gameState.unlockedEras.includes(era)) {
+                    button.classList.remove('locked');
+                } else {
+                    button.classList.add('locked');
+                }
+                
+                if (era === gameState.currentEra) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+        }
+
+        // Set current era
+        function setEra(era) {
+            if (!gameState.unlockedEras.includes(era)) return;
+            
+            gameState.currentEra = era;
+            eraBackground.style.background = eras[era].background;
+            eraElement.textContent = eras[era].name;
+            
+            // Reset artifacts collected for new era
+            gameState.artifactsCollected = 0;
+            gameState.currentQuestions = [];
+            gameState.currentQuestionIndex = 0;
+            updateUI();
+            updateEraButtons();
+            
+            // Generate new platforms, artifacts and obstacles for this era
+            generatePlatforms();
+            generateArtifacts();
+            generateObstacles();
+        }
+
+        // Generate artifacts on the game board
+        function generateArtifacts() {
+            // Clear existing artifacts
+            gameState.artifactsOnBoard = [];
+            document.querySelectorAll('.artifact').forEach(el => el.remove());
+            
+            // Create new artifacts - place some on platforms, some on timeline
+            const artifactPositions = [
+                { x: 140, y: 250, platform: true },  // On first platform
+                { x: 340, y: 210, platform: true },  // On second platform  
+                { x: 540, y: 170, platform: true },  // On third platform
+                { x: 250, y: TIMELINE_Y - 25, platform: false }, // On timeline
+                { x: 550, y: TIMELINE_Y - 25, platform: false }  // On timeline
+            ];
+            
+            artifactPositions.forEach((pos, i) => {
+                createArtifact(pos.x, pos.y, eras[gameState.currentEra].artifacts[i]);
+            });
+        }
+
+        // Create a single artifact
+        function createArtifact(x, y, artifactData) {
+            const artifact = document.createElement('div');
+            artifact.className = 'artifact';
+            if (artifactData.special) {
+                artifact.classList.add('special');
+            }
+            artifact.style.left = `${x}px`;
+            artifact.style.top = `${y}px`;
+            artifact.dataset.type = artifactData.name;
+            artifact.dataset.special = artifactData.special;
+            if (artifactData.special) {
+                artifact.dataset.power = artifactData.power;
+            }
+            
+            // Add symbol and name
+            const icon = document.createElement('div');
+            icon.className = 'artifact-icon';
+            icon.textContent = artifactData.symbol;
+            
+            const name = document.createElement('div');
+            name.className = 'artifact-name';
+            name.textContent = artifactData.name;
+            
+            artifact.appendChild(icon);
+            artifact.appendChild(name);
+            
+            document.querySelector('.game-board').appendChild(artifact);
+            gameState.artifactsOnBoard.push({
+                element: artifact,
+                x: x,
+                y: y,
+                collected: false,
+                special: artifactData.special,
+                power: artifactData.power
+            });
+        }
+
+        // Generate obstacles on the timeline
+        function generateObstacles() {
+            // Clear existing obstacles
+            gameState.obstacles = [];
+            document.querySelectorAll('.obstacle').forEach(el => el.remove());
+            
+            // Create new obstacles on the timeline
+            const obstacleCount = 4;
+            for (let i = 0; i < obstacleCount; i++) {
+                const x = 150 + Math.random() * 400;
+                const direction = Math.random() > 0.5 ? 1 : -1;
+                const speed = 1 + Math.random() * 2;
+                createObstacle(x, direction, speed);
+            }
+            
+            // Start moving obstacles if not frozen
+            if (!gameState.powerUps.freeze.active) {
+                startMovingObstacles();
+            }
+        }
+
+        // Create a single obstacle
+        function createObstacle(x, direction, speed) {
+            const obstacle = document.createElement('div');
+            obstacle.className = 'obstacle moving';
+            obstacle.style.left = `${x}px`;
+            obstacle.style.top = `${TIMELINE_Y - 18}px`;
+            obstacle.textContent = '⚠️';
+            obstacle.dataset.direction = direction;
+            obstacle.dataset.speed = speed;
+            
+            document.querySelector('.game-board').appendChild(obstacle);
+            gameState.obstacles.push({
+                element: obstacle,
+                x: x,
+                direction: direction,
+                speed: speed
+            });
+        }
+
+        // Start moving obstacles
+        function startMovingObstacles() {
+            if (gameState.obstacleMoveInterval) {
+                clearInterval(gameState.obstacleMoveInterval);
+            }
+            
+            gameState.obstacleMoveInterval = setInterval(() => {
+                if (!gameState.gameActive || gameState.puzzleActive || gameState.powerUps.freeze.active) return;
+                
+                gameState.obstacles.forEach(obstacle => {
+                    // Update position based on direction and speed
+                    obstacle.x += obstacle.direction * obstacle.speed;
+                    
+                    // Reverse direction if hitting boundaries
+                    if (obstacle.x <= 20 || obstacle.x >= 740) {
+                        obstacle.direction *= -1;
+                    }
+                    
+                    // Update DOM
+                    obstacle.element.style.left = `${obstacle.x}px`;
+                });
+            }, 50);
+        }
+
+        // Move player horizontally
+        function movePlayer(direction) {
+            if (!gameState.gameActive || gameState.puzzleActive) return;
+            
+            const moveAmount = 7;
+            if (direction === 'left' && gameState.playerX > 20) {
+                gameState.playerX -= moveAmount;
+            } else if (direction === 'right' && gameState.playerX < 740) {
+                gameState.playerX += moveAmount;
+            }
+        }
+
+        // Jump action with physics
+        function jump() {
+            if (!gameState.gameActive || gameState.puzzleActive || gameState.isJumping) return;
+            
+            gameState.playerVelocityY = gameState.jumpPower;
+            gameState.isJumping = true;
+        }
+
+        // Check for collisions with artifacts
+        function checkArtifactCollision() {
+            gameState.artifactsOnBoard.forEach(artifact => {
+                if (!artifact.collected && 
+                    Math.abs(gameState.playerX - artifact.x) < 45 &&
+                    Math.abs(gameState.playerY - artifact.y) < 45) {
+                    collectArtifact(artifact);
+                }
+            });
+        }
+
+        // Check for collisions with obstacles
+        function checkObstacleCollision() {
+            gameState.obstacles.forEach(obstacle => {
+                if (Math.abs(gameState.playerX - obstacle.x) < 35 &&
+                    Math.abs(gameState.playerY - (TIMELINE_Y - 18)) < 35) {
+                    hitObstacle();
+                }
+            });
+        }
+
+        // Collect an artifact
+        function collectArtifact(artifact) {
+            artifact.collected = true;
+            artifact.element.style.display = 'none';
+            
+            player.classList.add('collecting');
+            setTimeout(() => {
+                player.classList.remove('collecting');
+            }, 500);
+            
+            gameState.artifactsCollected++;
+            
+            // Check if it's a special artifact
+            if (artifact.special) {
+                // Make power-up available
+                gameState.powerUps[artifact.power].available = true;
+                updatePowerUpIndicators();
+                gameState.score += 200; // Bonus points for special artifacts
+            } else {
+                gameState.score += 100;
+            }
+            
+            updateUI();
+            
+            // Check if all artifacts collected
+            if (gameState.artifactsCollected >= gameState.totalArtifacts) {
+                showCompletionMessage();
+                setTimeout(() => {
+                    startPuzzle();
+                }, 1500);
+            }
+        }
+
+        // Activate shield power-up
+        function activateShield() {
+            if (!gameState.powerUps.shield.available || gameState.powerUps.shield.active) return;
+            
+            gameState.powerUps.shield.active = true;
+            gameState.powerUps.shield.timeLeft = 10;
+            gameState.powerUps.shield.available = false;
+            player.classList.add('shielded');
+            
+            updatePowerUpIndicators();
+            
+            const shieldInterval = setInterval(() => {
+                if (gameState.powerUps.shield.timeLeft > 0) {
+                    gameState.powerUps.shield.timeLeft--;
+                    updatePowerUpIndicators();
+                } else {
+                    gameState.powerUps.shield.active = false;
+                    player.classList.remove('shielded');
+                    clearInterval(shieldInterval);
+                }
+            }, 1000);
+        }
+
+        // Activate time freeze power-up
+        function activateTimeFreeze() {
+            if (!gameState.powerUps.freeze.available || gameState.powerUps.freeze.active) return;
+            
+            gameState.powerUps.freeze.active = true;
+            gameState.powerUps.freeze.timeLeft = 8;
+            gameState.powerUps.freeze.available = false;
+            player.classList.add('frozen-power');
+            timeFrozenOverlay.classList.add('active');
+            
+            // Stop obstacle movement
+            if (gameState.obstacleMoveInterval) {
+                clearInterval(gameState.obstacleMoveInterval);
+            }
+            
+            updatePowerUpIndicators();
+            
+            const freezeInterval = setInterval(() => {
+                if (gameState.powerUps.freeze.timeLeft > 0) {
+                    gameState.powerUps.freeze.timeLeft--;
+                    updatePowerUpIndicators();
+                } else {
+                    gameState.powerUps.freeze.active = false;
+                    player.classList.remove('frozen-power');
+                    timeFrozenOverlay.classList.remove('active');
+                    // Resume obstacle movement
+                    if (gameState.gameActive && !gameState.puzzleActive) {
+                        startMovingObstacles();
+                    }
+                    clearInterval(freezeInterval);
+                }
+            }, 1000);
+        }
+
+        // Update power-up indicators
+        function updatePowerUpIndicators() {
+            // Shield indicator
+            if (gameState.powerUps.shield.active) {
+                shieldIndicator.classList.add('active');
+                shieldTime.textContent = `${gameState.powerUps.shield.timeLeft}s`;
+                shieldIndicator.classList.remove('ready');
+            } else if (gameState.powerUps.shield.available) {
+                shieldIndicator.classList.add('ready');
+                shieldIndicator.classList.remove('active');
+                shieldTime.textContent = 'TAP TO ACTIVATE';
+            } else {
+                shieldIndicator.classList.remove('active', 'ready');
+                shieldTime.textContent = 'NOT AVAILABLE';
+            }
+            
+            // Freeze indicator
+            if (gameState.powerUps.freeze.active) {
+                freezeIndicator.classList.add('active');
+                freezeTime.textContent = `${gameState.powerUps.freeze.timeLeft}s`;
+                freezeIndicator.classList.remove('ready');
+            } else if (gameState.powerUps.freeze.available) {
+                freezeIndicator.classList.add('ready');
+                freezeIndicator.classList.remove('active');
+                freezeTime.textContent = 'TAP TO ACTIVATE';
+            } else {
+                freezeIndicator.classList.remove('active', 'ready');
+                freezeTime.textContent = 'NOT AVAILABLE';
+            }
+        }
+
+        // Show era completion message
+        function showCompletionMessage() {
+            completionMessage.classList.add('active');
+            setTimeout(() => {
+                completionMessage.classList.remove('active');
+            }, 2000);
+        }
+
+        // Hit an obstacle
+        function hitObstacle() {
+            player.style.opacity = '0.5';
+            setTimeout(() => {
+                player.style.opacity = '1';
+            }, 300);
+            
+            gameState.lives--;
+            updateUI();
+            
+            if (gameState.lives <= 0) {
+                endGame(false);
+            }
+        }
+
+        // Start a puzzle with 3 questions
+        function startPuzzle() {
+            if (!gameState.gameActive) return;
+            
+            gameState.puzzleActive = true;
+            const era = eras[gameState.currentEra];
+            
+            // Select 3 random questions for this era
+            gameState.currentQuestions = [];
+            const availableQuestions = [...era.puzzles];
+            
+            for (let i = 0; i < gameState.questionsPerEra && availableQuestions.length > 0; i++) {
+                const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+                gameState.currentQuestions.push(availableQuestions.splice(randomIndex, 1)[0]);
+            }
+            
+            gameState.currentQuestionIndex = 0;
+            showNextQuestion();
+        }
+
+        // Show the next question
+        function showNextQuestion() {
+            if (gameState.currentQuestionIndex >= gameState.currentQuestions.length) {
+                // All questions answered correctly
+                completePuzzle();
+                return;
+            }
+            
+            const question = gameState.currentQuestions[gameState.currentQuestionIndex];
+            puzzleQuestion.textContent = question.question;
+            questionCounter.textContent = `Question ${gameState.currentQuestionIndex + 1} of ${gameState.questionsPerEra}`;
+            puzzleOptions.innerHTML = '';
+            
+            question.options.forEach((option, index) => {
+                const optionElement = document.createElement('div');
+                optionElement.className = 'puzzle-option';
+                optionElement.textContent = option;
+                optionElement.dataset.index = index;
+                optionElement.addEventListener('click', () => checkPuzzleAnswer(index, question.answer));
+                puzzleOptions.appendChild(optionElement);
+            });
+            
+            puzzleModal.classList.add('active');
+        }
+
+        // Check puzzle answer
+        function checkPuzzleAnswer(selectedIndex, correctIndex) {
+            const options = puzzleOptions.querySelectorAll('.puzzle-option');
+            
+            options.forEach(option => {
+                option.classList.remove('correct', 'incorrect');
+                if (parseInt(option.dataset.index) === correctIndex) {
+                    option.classList.add('correct');
+                } else if (parseInt(option.dataset.index) === selectedIndex && selectedIndex !== correctIndex) {
+                    option.classList.add('incorrect');
+                }
+            });
+            
+            if (selectedIndex === correctIndex) {
+                // Correct answer
+                gameState.score += 200;
+                updateUI();
+                
+                setTimeout(() => {
+                    puzzleModal.classList.remove('active');
+                    gameState.currentQuestionIndex++;
+                    
+                    if (gameState.currentQuestionIndex < gameState.currentQuestions.length) {
+                        // Show next question
+                        setTimeout(showNextQuestion, 500);
+                    } else {
+                        // All questions completed
+                        gameState.puzzleActive = false;
+                        completePuzzle();
+                    }
+                }, 1500);
+            } else {
+                // Wrong answer
+                gameState.lives--;
+                updateUI();
+                
+                if (gameState.lives <= 0) {
+                    setTimeout(() => {
+                        puzzleModal.classList.remove('active');
+                        endGame(false);
+                    }, 1500);
+                } else {
+                    setTimeout(() => {
+                        puzzleModal.classList.remove('active');
+                        gameState.puzzleActive = false;
+                    }, 1500);
+                }
+            }
+        }
+
+        // Complete the puzzle and progress
+        function completePuzzle() {
+            // Unlock next era
+            const eraKeys = Object.keys(eras);
+            const currentIndex = eraKeys.indexOf(gameState.currentEra);
+            
+            if (currentIndex < eraKeys.length - 1) {
+                const nextEra = eraKeys[currentIndex + 1];
+                if (!gameState.unlockedEras.includes(nextEra)) {
+                    gameState.unlockedEras.push(nextEra);
+                }
+                updateEraButtons();
+                
+                // Show message about unlocking next era
+                completionMessage.innerHTML = `
+                    <div>Era Completed!</div>
+                    <div style="font-size: 0.9rem; margin-top: 8px;">${eras[nextEra].name} unlocked!</div>
+                `;
+                completionMessage.classList.add('active');
+                setTimeout(() => {
+                    completionMessage.classList.remove('active');
+                    setEra(nextEra);
+                }, 2000);
+            } else {
+                endGame(true);
+            }
+        }
+
+        // End the game
+        function endGame(victory) {
+            gameState.gameActive = false;
+            
+            // Clear obstacle movement interval
+            if (gameState.obstacleMoveInterval) {
+                clearInterval(gameState.obstacleMoveInterval);
+            }
+            
+            if (victory) {
+                gameOverTitle.textContent = "TIMELINE RESTORED!";
+                gameOverMessage.textContent = "Congratulations! You've successfully repaired the timeline and saved history!";
+                gameState.score += 2000; // Bonus for winning
+            } else {
+                gameOverTitle.textContent = "TIMELINE COLLAPSED";
+                gameOverMessage.textContent = "The fabric of time has been irreparably damaged. History is lost forever.";
+            }
+            
+            finalScore.textContent = gameState.score;
+            gameOverModal.classList.add('active');
+        }
+
+        // Update UI elements
+        function updateUI() {
+            scoreElement.textContent = gameState.score;
+            artifactsElement.textContent = `${gameState.artifactsCollected}/${gameState.totalArtifacts}`;
+            livesElement.textContent = gameState.lives;
+        }
+
+        // Event listeners
+        startButton.addEventListener('click', initGame);
+        restartButton.addEventListener('click', initGame);
+        
+        // Desktop controls
+        moveLeftButton.addEventListener('click', () => movePlayer('left'));
+        moveRightButton.addEventListener('click', () => movePlayer('right'));
+        jumpButton.addEventListener('click', jump);
+        
+        // Mobile controls
+        mobileLeft.addEventListener('click', () => movePlayer('left'));
+        mobileRight.addEventListener('click', () => movePlayer('right'));
+        mobileJump.addEventListener('click', jump);
+        
+        // Touch events for mobile
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        document.addEventListener('touchstart', (e) => {
+            if (!gameState.gameActive || gameState.puzzleActive) return;
+            
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+        
+        document.addEventListener('touchend', (e) => {
+            if (!gameState.gameActive || gameState.puzzleActive) return;
+            
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+            
+            // Swipe detection
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                // Horizontal swipe
+                if (diffX > 30) {
+                    movePlayer('right');
+                } else if (diffX < -30) {
+                    movePlayer('left');
+                }
+            } else {
+                // Vertical swipe - jump
+                if (diffY < -30) {
+                    jump();
+                }
+            }
+        });
+        
+        // Power-up activation
+        shieldIndicator.addEventListener('click', activateShield);
+        freezeIndicator.addEventListener('click', activateTimeFreeze);
+        
+        actionButton.addEventListener('click', () => {
+            if (gameState.gameActive && !gameState.puzzleActive) {
+                startPuzzle();
+            }
+        });
+        
+        eraButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                if (gameState.gameActive && !gameState.puzzleActive && !button.classList.contains('locked')) {
+                    setEra(button.dataset.era);
+                }
+            });
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.gameActive || gameState.puzzleActive) return;
+            
+            if (e.key === 'ArrowLeft' || e.key === 'a') {
+                movePlayer('left');
+            } else if (e.key === 'ArrowRight' || e.key === 'd') {
+                movePlayer('right');
+            } else if (e.key === ' ' || e.key === 'w' || e.key === 'ArrowUp') {
+                jump();
+            } else if (e.key === 'Enter') {
+                startPuzzle();
+            }
+        });
+
+        // Era data with 3 questions per era
+        const eras = {
+            prehistoric: {
+                name: 'Prehistoric',
+                background: 'linear-gradient(135deg, #8B4513, #A0522D)',
+                artifacts: [
+                    {name: 'Fire', symbol: '🔥', special: false},
+                    {name: 'Stone Tool', symbol: '⚒️', special: false},
+                    {name: 'Cave Painting', symbol: '🎨', special: true, power: 'freeze'},
+                    {name: 'Spear', symbol: '🪓', special: false},
+                    {name: 'Animal Skin', symbol: '🐅', special: true, power: 'shield'}
+                ],
+                puzzles: [
+                    {
+                        question: "Which of these developments came first in human prehistory?",
+                        options: ["Agriculture", "Metalworking", "Cave Painting", "Domestication of Dogs"],
+                        answer: 2
+                    },
+                    {
+                        question: "What was the primary purpose of early cave paintings?",
+                        options: ["Decoration", "Religious Rituals", "Historical Records", "Communication"],
+                        answer: 1
+                    },
+                    {
+                        question: "What material was primarily used for making tools in the Stone Age?",
+                        options: ["Bronze", "Iron", "Stone", "Copper"],
+                        answer: 2
+                    },
+                    {
+                        question: "Which early human species first used fire?",
+                        options: ["Homo Sapiens", "Neanderthals", "Homo Erectus", "Australopithecus"],
+                        answer: 2
+                    }
+                ]
+            },
+            ancient: {
+                name: 'Ancient Civilizations',
+                background: 'linear-gradient(135deg, #CD853F, #D2691E)',
+                artifacts: [
+                    {name: 'Pyramid', symbol: '◼️', special: false},
+                    {name: 'Scroll', symbol: '📜', special: true, power: 'freeze'},
+                    {name: 'Coin', symbol: '🪙', special: false},
+                    {name: 'Amphora', symbol: '🏺', special: false},
+                    {name: 'Sphinx', symbol: '🦁', special: true, power: 'shield'}
+                ],
+                puzzles: [
+                    {
+                        question: "Which civilization built the Great Pyramid of Giza?",
+                        options: ["Romans", "Greeks", "Egyptians", "Mesopotamians"],
+                        answer: 2
+                    },
+                    {
+                        question: "What writing system was used in ancient Mesopotamia?",
+                        options: ["Hieroglyphics", "Cuneiform", "Alphabet", "Oracle Bones"],
+                        answer: 1
+                    },
+                    {
+                        question: "Which ancient civilization developed democracy?",
+                        options: ["Egyptian", "Greek", "Roman", "Persian"],
+                        answer: 1
+                    },
+                    {
+                        question: "What was the primary building material in ancient Rome?",
+                        options: ["Marble", "Concrete", "Granite", "Sandstone"],
+                        answer: 1
+                    }
+                ]
+            },
+            medieval: {
+                name: 'Medieval Times',
+                background: 'linear-gradient(135deg, #2F4F4F, #696969)',
+                artifacts: [
+                    {name: 'Sword', symbol: '⚔️', special: false},
+                    {name: 'Castle', symbol: '🏰', special: true, power: 'shield'},
+                    {name: 'Manuscript', symbol: '📖', special: false},
+                    {name: 'Crown', symbol: '👑', special: false},
+                    {name: 'Shield', symbol: '🛡️', special: true, power: 'freeze'}
+                ],
+                puzzles: [
+                    {
+                        question: "What event significantly reduced Europe's population in the 14th century?",
+                        options: ["Hundred Years' War", "Black Death", "Crusades", "Great Famine"],
+                        answer: 1
+                    },
+                    {
+                        question: "Which document limited the power of the English king in 1215?",
+                        options: ["Domesday Book", "Magna Carta", "Doomsday Book", "Canterbury Tales"],
+                        answer: 1
+                    },
+                    {
+                        question: "What was the primary economic system in medieval Europe?",
+                        options: ["Capitalism", "Feudalism", "Socialism", "Mercantilism"],
+                        answer: 1
+                    },
+                    {
+                        question: "Which famous medieval leader was known as the 'Lionheart'?",
+                        options: ["Richard I", "William the Conqueror", "Charlemagne", "Henry VIII"],
+                        answer: 0
+                    }
+                ]
+            },
+            renaissance: {
+                name: 'Renaissance',
+                background: 'linear-gradient(135deg, #8B0000, #B22222)',
+                artifacts: [
+                    {name: 'Painting', symbol: '🖼️', special: true, power: 'freeze'},
+                    {name: 'Globe', symbol: '🌍', special: false},
+                    {name: 'Printing Press', symbol: '🖨️', special: false},
+                    {name: 'Compass', symbol: '🧭', special: true, power: 'shield'},
+                    {name: 'Telescope', symbol: '🔭', special: false}
+                ],
+                puzzles: [
+                    {
+                        question: "Who painted the Mona Lisa?",
+                        options: ["Michelangelo", "Raphael", "Leonardo da Vinci", "Donatello"],
+                        answer: 2
+                    },
+                    {
+                        question: "What invention revolutionized the spread of knowledge during the Renaissance?",
+                        options: ["Compass", "Printing Press", "Telescope", "Steam Engine"],
+                        answer: 1
+                    },
+                    {
+                        question: "Which family was a major patron of the arts in Florence?",
+                        options: ["Borgia", "Medici", "Sforza", "Este"],
+                        answer: 1
+                    },
+                    {
+                        question: "What was the main intellectual movement of the Renaissance?",
+                        options: ["Humanism", "Scholasticism", "Existentialism", "Rationalism"],
+                        answer: 0
+                    }
+                ]
+            },
+            modern: {
+                name: 'Modern Age',
+                background: 'linear-gradient(135deg, #191970, #000080)',
+                artifacts: [
+                    {name: 'Computer', symbol: '💻', special: false},
+                    {name: 'Rocket', symbol: '🚀', special: true, power: 'shield'},
+                    {name: 'Smartphone', symbol: '📱', special: false},
+                    {name: 'Satellite', symbol: '🛰️', special: true, power: 'freeze'},
+                    {name: 'Internet Router', symbol: '📡', special: false}
+                ],
+                puzzles: [
+                    {
+                        question: "What year did the World Wide Web become publicly available?",
+                        options: ["1985", "1991", "1995", "2000"],
+                        answer: 1
+                    },
+                    {
+                        question: "Which event marked the beginning of the Digital Revolution?",
+                        options: ["Invention of the transistor", "Launch of Sputnik", "Creation of ARPANET", "Release of the iPhone"],
+                        answer: 0
+                    },
+                    {
+                        question: "What was the first artificial satellite launched into space?",
+                        options: ["Explorer 1", "Sputnik 1", "Vanguard 1", "Telstar 1"],
+                        answer: 1
+                    },
+                    {
+                        question: "Which company developed the first commercially successful personal computer?",
+                        options: ["IBM", "Apple", "Microsoft", "Commodore"],
+                        answer: 1
+                    }
+                ]
+            }
+        };
+
+        // Initialize UI
+        updateUI();
+        updateEraButtons();
+        updatePowerUpIndicators();
+    </script>
+</body>
+</html>
